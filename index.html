@@ -4,45 +4,198 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <title>Practical Machine Learning Project by HoneyBedger</title>
-    <link rel="stylesheet" href="stylesheets/styles.css">
-    <link rel="stylesheet" href="stylesheets/github-dark.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-    <script src="javascripts/respond.js"></script>
-    <!--[if lt IE 9]>
-      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-    <!--[if lt IE 8]>
-    <link rel="stylesheet" href="stylesheets/ie.css">
-    <![endif]-->
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/github-light.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
   </head>
   <body>
-      <div id="header">
-        <nav>
-          <li class="fork"><a href="https://github.com/HoneyBedger/PracticalMachineLearning_Project">View On GitHub</a></li>
-          <li class="downloads"><a href="https://github.com/HoneyBedger/PracticalMachineLearning_Project/zipball/master">ZIP</a></li>
-          <li class="downloads"><a href="https://github.com/HoneyBedger/PracticalMachineLearning_Project/tarball/master">TAR</a></li>
-          <li class="title">DOWNLOADS</li>
-        </nav>
-      </div><!-- end header -->
-
     <div class="wrapper">
+      <header>
+        <h1 class="header">Practical Machine Learning Project</h1>
+        <p class="header"></p>
 
+        <ul>
+          <li class="download"><a class="buttons" href="https://github.com/HoneyBedger/PracticalMachineLearning_Project/zipball/master">Download ZIP</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/HoneyBedger/PracticalMachineLearning_Project/tarball/master">Download TAR</a></li>
+          <li><a class="buttons github" href="https://github.com/HoneyBedger/PracticalMachineLearning_Project">View On GitHub</a></li>
+        </ul>
+
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/HoneyBedger">HoneyBedger</a></p>
+
+
+      </header>
       <section>
-        <div id="title">
-          <h1>Practical Machine Learning Project</h1>
-          <p></p>
-          <hr>
-          <span class="credits left">Project maintained by <a href="https://github.com/HoneyBedger">HoneyBedger</a></span>
-          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
-        </div>
+        <p></p>
 
-        <p>This is the repo for the Practical Machine Learning Project from Data Science Coursera.</p>
+<p></p>
+
+<p>
+
+</p>
+
+
+
+<p>
+</p>
+
+
+
+
+
+
+
+<p></p>
+
+
+
+
+
+<p></p>
+
+<p></p>
+
+<div>
+
+
+<div id="header">
+<h1>
+<a id="weight-lifting-exercises-prediction-of-how-well-the-exercise-was-done" class="anchor" href="#weight-lifting-exercises-prediction-of-how-well-the-exercise-was-done" aria-hidden="true"><span class="octicon octicon-link"></span></a>Weight Lifting Exercises: prediction of how well the exercise was done</h1>
+</div>
+
+<div id="summary">
+<h2>
+<a id="summary" class="anchor" href="#summary" aria-hidden="true"><span class="octicon octicon-link"></span></a>Summary</h2>
+<p>Six young health partiwhiteipants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A) and with one of four common mistakes (Classes B to E).<br>We build a random forest model to predict Class based on the data from accelerometers on the belt, forearm, arm, and dumbell. The accuracy from the 5-fold cross-validation is 99.6%, and all the 20 test-cases are identified correctly.</p>
+</div>
+
+<div id="exploratory-analysis">
+<h2>
+<a id="exploratory-analysis" class="anchor" href="#exploratory-analysis" aria-hidden="true"><span class="octicon octicon-link"></span></a>Exploratory analysis</h2>
+<p>Load required packages. Download and read data. Look at the structure of the training dataset.</p>
+<pre><code>library(caret); library(randomForest); library(ggplot2); library(gridExtra)</code></pre>
+<pre><code>## Loading required package: lattice
+## Loading required package: ggplot2
+## randomForest 4.6-12
+## Type rfNews() to see new features/changes/bug fixes.</code></pre>
+<pre><code>if(!file.exists("pml-training.csv")){
+  trainURL &lt;- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+  download.file(trainURL, destfile = "pml-training.csv")}
+if(!file.exists("pml-testing.csv")){
+  testURL &lt;- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+  download.file(testURL, destfile = "pml-testing.csv")}
+pml_train &lt;- read.csv("pml-training.csv", na.strings = c("NA", ""))
+pml_test &lt;- read.csv("pml-testing.csv", na.strings = c("NA", ""))
+#str(pml_train)</code></pre>
+<p>After running <code>str(pml_train)</code> (commented out because the output is long), we know that there are 160 variables, some of them are averages, maxima, minima etc, thus they are NAs almost everywhere. So we get rid of them.</p>
+<pre><code>pml_train &lt;- pml_train[, colSums(is.na(pml_train)) &lt; 1]</code></pre>
+<p>Next, the first 7 variables seem to be auxiliary and unnessessary for the model. From the figure below (it’s just one figure with 7 plots :) ) one can see that only the first variable, <code>X</code> correlates with the <code>classe</code> outcome. But the fact that <code>X</code> has almost perfect correlation with <code>classe</code> only means that the rows are sorted by class, so variable <code>X</code> should not be used when building a model.</p>
+<pre><code>p1 &lt;- ggplot(pml_train, aes(y = classe, x = X)) + geom_point(stat="identity") +
+  labs(x = "X", y = "classe") + theme(axis.text.x=element_blank())
+p2 &lt;- ggplot(pml_train, aes(y = classe, x = user_name)) + geom_point(stat="identity") + 
+  labs(x = "user_name", y = "classe") + theme(axis.text.x=element_blank())
+p3 &lt;- ggplot(pml_train, aes(y = classe, x = raw_timestamp_part_1)) + geom_point(stat="identity") +
+  labs(x = "raw_timestamp_part_1", y = "classe") + theme(axis.text.x=element_blank())
+p4 &lt;- ggplot(pml_train, aes(y = classe, x = raw_timestamp_part_2)) + geom_point(stat="identity") +
+  labs(x = "raw_timestamp_part_2", y = "classe") + theme(axis.text.x=element_blank())
+p5 &lt;- ggplot(pml_train, aes(y = classe, x = cvtd_timestamp)) + geom_point(stat="identity") +
+  labs(x = "cvtd_timestamp", y = "classe") + theme(axis.text.x=element_blank())
+p6 &lt;- ggplot(pml_train, aes(y = classe, x = new_window)) + geom_point(stat="identity") +
+  labs(x = "new_window", y = "classe") + theme(axis.text.x=element_blank())
+p7 &lt;- ggplot(pml_train, aes(y = classe, x = num_window)) + geom_point(stat="identity") +
+  labs(x = "num_window", y = "classe") + theme(axis.text.x=element_blank())
+fig1 &lt;- grid.arrange(p1, p2, p3, p4, p5, p6, p7, nrow = 3)</code></pre>
+<p>The image is here: https://github.com/HoneyBedger/PracticalMachineLearning_Project/blob/master/PracticalMachineLearning_Project_files/figure-html/unnamed-chunk-4-1.png  couldn't figure out how to make
+"img src=.../" work in this weird file...
+</p>
+<div><img src="http://github.com/HoneyBedger/PracticalMachineLearning_Project/blob/master/PracticalMachineLearning_Project_files/figure-html/unnamed-chunk-4-1.png"></div>
+<p>So, now our training set <code>pml_train</code> has 60 variables, the 60-th one is the outcome, and 8:59 are used as predictors.</p>
+<div id="model">
+<h2>
+<a id="model" class="anchor" href="#model" aria-hidden="true"><span class="octicon octicon-link"></span></a>Model</h2>
+<p>Try models from the following classes: simple tree model, linear discriminant analysis, boosting, and random forest (with default settings). After each fit print its user time and best accuracy.</p>
+<pre><code>set.seed(2807540)
+tree_fit &lt;- train(x = pml_train[8:59], y = pml_train$classe, method = "rpart")
+print(data.frame(user_time = tree_fit$times[[1]][[1]], best_accuracy = tree_fit$results[[2]][[as.integer(row.names(tree_fit$bestTune))]]))</code></pre>
+<pre><code>##   user_time best_accuracy
+## 1    19.741      0.514341</code></pre>
+<pre><code>lda_fit &lt;- train(x = pml_train[8:59], y = pml_train$classe, method = "lda")
+print(data.frame(user_time = lda_fit$times[[1]][[1]], best_accuracy = lda_fit$results[[2]][[as.integer(row.names(lda_fit$bestTune))]]))</code></pre>
+<pre><code>##   user_time best_accuracy
+## 1    14.642     0.7027026</code></pre>
+<pre><code>boost_fit &lt;- train(x = pml_train[8:59], y = pml_train$classe, method = "gbm", verbose =F)
+print(data.frame(user_time = boost_fit$times[[1]][[1]], best_accuracy = boost_fit$results[[5]][[as.integer(row.names(boost_fit$bestTune))]]))</code></pre>
+<pre><code>##   user_time best_accuracy
+## 1  2023.877      0.959575</code></pre>
+<pre><code>rf_fit &lt;- train(x = pml_train[8:59], y = pml_train$classe, method = "rf")
+print(data.frame(user_time = rf_fit$times[[1]][[1]], best_accuracy = rf_fit$results[[2]][[as.integer(row.names(rf_fit$bestTune))]]))</code></pre>
+<pre><code>##   user_time best_accuracy
+## 1  5719.962     0.9929607</code></pre>
+<p>From the above summaries, simple tree model is (not surprisingly) very inaccurate, linear discriminant analysis is better but still not accurate enough. Boosting and random forest are both very good. Random forest model is more computationally demanding, but also more accurate. Normally I would choose boosting, but since for this project we need to submit correct test results, I decided to go with the most accurate model - random forest. Also, from now on we will call <code>randomForest</code> function directly instead of using <code>train(... method = "rf" ...)</code> since it runs much faster. So, here is our final model:</p>
+<pre><code>set.seed(241291)
+rf_fit_final &lt;- randomForest(x = pml_train[8:59], y = pml_train$classe)
+rf_fit_final</code></pre>
+<pre><code>## 
+## Call:
+##  randomForest(x = pml_train[8:59], y = pml_train$classe) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 7
+## 
+##         OOB estimate of  error rate: 0.27%
+## Confusion matrix:
+##      A    B    C    D    E class.error
+## A 5580    0    0    0    0 0.000000000
+## B   11 3783    3    0    0 0.003687121
+## C    0   10 3412    0    0 0.002922268
+## D    0    0   21 3194    1 0.006840796
+## E    0    0    2    4 3601 0.001663432</code></pre>
+<p>In-sample error rate is &lt; 1%, that is, the accuracy is &gt; 99%. Of course, one should expect a slightly larger out-of-sample error, since random forests are known to overfit.</p>
+</div>
+
+<div id="cross-validation">
+<h2>
+<a id="cross-validation" class="anchor" href="#cross-validation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Cross-validation</h2>
+<p>Do a 5-fold cross-validation to test the accuracy of the final model and estimate out-of-sample error. Each element of the <code>folds</code> list contains indeces of the corresponding 5 test sets. We create a function <code>cv</code>, which does the following:<br>1. builds a model using the rows that are not test rows;<br>2. predicts and constructs confusion matrix for the corresponding test set.<br>The function is then applied to each element of the <code>folds</code> list.</p>
+<pre><code>set.seed(2431)
+nfolds &lt;- 5
+folds &lt;- createFolds(y = pml_train$classe, k = nfolds, list = T, returnTrain = F)
+cv &lt;- function(fold) {
+  cv_fit &lt;- randomForest(x = pml_train[-fold, 8:59], y = pml_train[-fold, 60])
+  confusionMatrix(pml_train[fold, 60], predict(cv_fit, pml_train[fold,]))
+}
+cv_confMat &lt;- lapply(folds, cv)
+cv_accuracy &lt;- sapply(cv_confMat, function(fold){fold$overall[1]})
+print(cv_accuracy)</code></pre>
+<pre><code>## Fold1.Accuracy Fold2.Accuracy Fold3.Accuracy Fold4.Accuracy Fold5.Accuracy 
+##      0.9949058      0.9969411      0.9964340      0.9943935      0.9951568</code></pre>
+<pre><code>mean(cv_accuracy)</code></pre>
+<pre><code>## [1] 0.9955662</code></pre>
+<p>With the estimated out-of-sample error of 99.6% one can expect the model to do well on the test set!</p>
+</div>
+
+<p></p>
+</div>
+
+
+
+
+
+
+
+<p>
+</p>
+</div>
       </section>
-
+      <footer>
+        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
+      </footer>
     </div>
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
-    
+		
   </body>
 </html>
