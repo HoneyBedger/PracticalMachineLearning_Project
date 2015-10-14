@@ -1,0 +1,117 @@
+---
+title: "Weight Lifting Exercises: prediction of how well the exercise was done"
+output: html_document
+---
+
+##Summary
+Six young health participants were asked to perform one set of 10 repetitions of the Unilateral Dumbbell Biceps Curl in five different fashions: exactly according to the specification (Class A) and with one of four common mistakes (Classes B to E).  
+We build a random forest model to predict Class based on the data from accelerometers
+on the belt, forearm, arm, and dumbell. The accuracy from the 5-fold cross-validation
+is 99.6%, and all the 20 test-cases are identified correctly.   
+
+##Exploratory analysis
+Load required packages. Download and read data.
+Look at the structure of the training dataset.
+```{r echo = T, results='hide'}
+library(caret); library(randomForest); library(ggplot2); library(gridExtra)
+```
+```{r echo = T}
+if(!file.exists("pml-training.csv")){
+  trainURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+  download.file(trainURL, destfile = "pml-training.csv")}
+if(!file.exists("pml-testing.csv")){
+  testURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+  download.file(testURL, destfile = "pml-testing.csv")}
+pml_train <- read.csv("pml-training.csv", na.strings = c("NA", ""))
+pml_test <- read.csv("pml-testing.csv", na.strings = c("NA", ""))
+str(pml_train)
+```
+So, we have 160 variables, some of them are averages, maxima, minima etc, thus they are
+NAs almost everywhere. So we get rid of them.
+```{r echo = T}
+pml_train <- pml_train[, colSums(is.na(pml_train)) < 1]
+```
+Next, the first 7 variables seem to be auxiliary and unnessessary for the model.
+From the figure below (it's just one figure with 7 plots :) ) one can see that only the first variable, `X` correlates with
+the `classe` outcome. But the fact that `X` has almost perfect correlation with `classe`
+only means that the rows are sorted by class, so variable `X` should not be used
+when building a model.    
+```{r echo = T}
+p1 <- ggplot(pml_train, aes(y = classe, x = X)) + geom_point(stat="identity") +
+  labs(x = "X", y = "classe") + theme(axis.text.x=element_blank())
+p2 <- ggplot(pml_train, aes(y = classe, x = user_name)) + geom_point(stat="identity") + 
+  labs(x = "user_name", y = "classe") + theme(axis.text.x=element_blank())
+p3 <- ggplot(pml_train, aes(y = classe, x = raw_timestamp_part_1)) + geom_point(stat="identity") +
+  labs(x = "raw_timestamp_part_1", y = "classe") + theme(axis.text.x=element_blank())
+p4 <- ggplot(pml_train, aes(y = classe, x = raw_timestamp_part_2)) + geom_point(stat="identity") +
+  labs(x = "raw_timestamp_part_2", y = "classe") + theme(axis.text.x=element_blank())
+p5 <- ggplot(pml_train, aes(y = classe, x = cvtd_timestamp)) + geom_point(stat="identity") +
+  labs(x = "cvtd_timestamp", y = "classe") + theme(axis.text.x=element_blank())
+p6 <- ggplot(pml_train, aes(y = classe, x = new_window)) + geom_point(stat="identity") +
+  labs(x = "new_window", y = "classe") + theme(axis.text.x=element_blank())
+p7 <- ggplot(pml_train, aes(y = classe, x = num_window)) + geom_point(stat="identity") +
+  labs(x = "num_window", y = "classe") + theme(axis.text.x=element_blank())
+fig1 <- grid.arrange(p1, p2, p3, p4, p5, p6, p7, nrow = 3)
+```
+So, now our training set `pml_train` has 60 variables, the 60-th one is the outcome,
+and 8:59 are used as predictors.   
+
+
+##Model
+Try models from the following classes: simple tree model, linear discriminant analysis,
+boosting, and random forest (with default settings).
+After each fit print its user time and best accuracy.
+```{r echo = T, cache = T}
+set.seed(2807540)
+tree_fit <- train(x = pml_train[8:59], y = pml_train$classe, method = "rpart")
+print(data.frame(user_time = tree_fit$times[[1]][[1]], best_accuracy = tree_fit$results[[2]][[as.integer(row.names(tree_fit$bestTune))]]))
+lda_fit <- train(x = pml_train[8:59], y = pml_train$classe, method = "lda")
+print(data.frame(user_time = lda_fit$times[[1]][[1]], best_accuracy = lda_fit$results[[2]][[as.integer(row.names(lda_fit$bestTune))]]))
+boost_fit <- train(x = pml_train[8:59], y = pml_train$classe, method = "gbm", verbose =F)
+print(data.frame(user_time = boost_fit$times[[1]][[1]], best_accuracy = boost_fit$results[[5]][[as.integer(row.names(boost_fit$bestTune))]]))
+rf_fit <- train(x = pml_train[8:59], y = pml_train$classe, method = "rf")
+print(data.frame(user_time = rf_fit$times[[1]][[1]], best_accuracy = rf_fit$results[[2]][[as.integer(row.names(rf_fit$bestTune))]]))
+```
+From the above summaries, simple tree model is (not surprisingly) very inaccurate,
+linear discriminant analysis is better but still not accurate enough.
+Boosting and random forest are both very good. Random forest model is more
+computationally demanding, but also more accurate.
+Normally I would choose boosting, but since for this project we need to submit
+correct test results, I decided to go with the most accurate model - random forest.
+Also, from now on we will call `randomForest` function directly instead of using
+`train(... method = "rf" ...)` since it runs much faster. So, here is our final
+model:  
+```{r echo = T, cache = T}
+set.seed(241291)
+rf_fit_final <- randomForest(x = pml_train[8:59], y = pml_train$classe)
+rf_fit_final
+```
+In-sample error rate is < 1%, that is, the accuracy is > 99%.
+Of course, one should expect a slightly
+larger out-of-sample error, since random forests are known to overfit.  
+
+##Cross-validation
+Do a 5-fold cross-validation to test the accuracy of the final model and estimate
+out-of-sample error. Each element of the `folds` list contains indeces of the corresponding
+5 test sets. We create a function `cv`, which does the following:  
+1. builds a model using the rows that are not test rows;  
+2. predicts and constructs confusion matrix for the corresponding test set.  
+The function is then applied to each element of the `folds` list.  
+```{r echo = T, cache = T}
+set.seed(2431)
+nfolds <- 5
+folds <- createFolds(y = pml_train$classe, k = nfolds, list = T, returnTrain = F)
+cv <- function(fold) {
+  cv_fit <- randomForest(x = pml_train[-fold, 8:59], y = pml_train[-fold, 60])
+  confusionMatrix(pml_train[fold, 60], predict(cv_fit, pml_train[fold,]))
+}
+cv_confMat <- lapply(folds, cv)
+cv_accuracy <- sapply(cv_confMat, function(fold){fold$overall[1]})
+print(cv_accuracy)
+mean(cv_accuracy)
+```
+With the estimated out-of-sample error of 99.6% one can expect the model to do well on
+the test set!     
+   
+   
+
